@@ -69,3 +69,12 @@ data, FMOD and the Steamworks SDK are not part of this repo.
 ## Licence
 
 `LICENSE.txt` is unchanged: the Barony Open Source License (BSD 2-Clause).
+
+## Gear on allies (unreleased)
+
+The engine side of `sam_monster_*`, `sam_give_item_to_ally` and `sam_take_item_from_ally` (see the framework's `docs/ally-items.md`).
+The call site is marked `S.A.M` and does nothing unless a mod moves an item.
+
+| file | call | what it is for |
+|---|---|---|
+| `game.cpp` | `SAMAllyItems::tick` | an item move between a player and an ally waits for the next tick, then finishes and fires its event |

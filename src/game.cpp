@@ -30,6 +30,7 @@
 #include "menu.hpp"
 #include "net.hpp"
 #include "sam_party.hpp"
+#include "sam_ally_items.hpp"
 #ifdef STEAMWORKS
 #include <steam/steam_api.h>
 #include "steam.hpp"
@@ -5450,6 +5451,7 @@ bool handleEvents(void)
 			// apply what arrived (in order), then send what this tick queued. No-op with no
 			// script loaded or outside multiplayer.
 			SAMParty::tick(); // S.A.M: a party that carried the run on and is gone, without a death to say so
+			SAMAllyItems::tick(); // S.A.M: item moves between a player and an ally wait for this tick
 			SAMNet::tick();
 		}
 		else
