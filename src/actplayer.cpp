@@ -6216,6 +6216,30 @@ void playerDebugTests(Entity* my)
 #endif
 }
 
+// S.A.M: the party that carried the run on has fallen (or is gone) with every player already down.
+// What a death with nobody left standing does in vanilla, once, now that it is true: the save goes,
+// the game-over music plays, and the scores are posted. (sam_party.cpp, host and clients alike.)
+void samOnAllPlayersDead();
+
+void samPartyWiped()
+{
+	if ( gameModeManager.allowsSaves() )
+	{
+		if ( multiplayer == SINGLE )
+		{
+			deleteSaveGame(multiplayer);   // every player is down, so splitscreen too
+		}
+		else
+		{
+			deleteMultiplayerSaveGames();   // host only; it checks that no player is left standing
+		}
+	}
+#ifdef SOUND
+	playMusic(gameovermusic, false, true, false);
+#endif
+	samOnAllPlayersDead();
+}
+
 // Every player is down and nothing carries the run on: the one-time "all dead" bookkeeping
 // (online scores here, and on each client by DEND). S.A.M: a function of its own so the
 // party code can run it when the last member standing falls after the players (sam_party.cpp).
@@ -11472,7 +11496,8 @@ void actPlayer(Entity* my)
 							}
 							node_t* nextnode;
 
-							if ( gameModeManager.allowsSaves() )
+							// S.A.M: not while the party carries the run on; the save goes when it is wiped (samPartyWiped)
+							if ( gameModeManager.allowsSaves() && !SAMParty::partyCarriesOn() )
 							{
 								if ( multiplayer == SINGLE )
 								{
@@ -11530,7 +11555,7 @@ void actPlayer(Entity* my)
 								}
 							}
 
-							if (allDead)
+							if (allDead && !SAMParty::partyCarriesOn()) // S.A.M: the run goes on; samPartyWiped plays it at the end
 							{
 								playMusic(gameovermusic, false, true, false);
 							}
@@ -11550,7 +11575,10 @@ void actPlayer(Entity* my)
 								}
 							}
 
-							if ( (multiplayer == SINGLE && !splitscreen) || !keepInventoryGlobal )
+							// S.A.M: a solo player whose party carries the run on gets up again on the next
+							// floor, so Keep Inventory decides here as it does in co-op, not the solo rule.
+							const bool samSoloDrop = (multiplayer == SINGLE && !splitscreen) && !SAMParty::partyCarriesOn();
+							if ( samSoloDrop || !keepInventoryGlobal )
 							{
 								for ( node = stats[PLAYER_NUM]->inventory.first; node != nullptr; node = nextnode )
 								{
@@ -11567,7 +11595,7 @@ void actPlayer(Entity* my)
 											steamAchievement("BARONY_ACH_CHOSEN_ONE");
 										}
 									}
-									if ( (multiplayer == SINGLE && !splitscreen) )
+									if ( samSoloDrop )
 									{
 										int c = item->count;
 										for ( c = item->count; c > 0; c-- )
@@ -11734,7 +11762,10 @@ void actPlayer(Entity* my)
 								}
 							}
 
-							deleteMultiplayerSaveGames(); //Will only delete save games if was last player alive.
+							if ( !SAMParty::partyCarriesOn() ) // S.A.M: not while the party carries the run on; samPartyWiped deletes it at the end
+							{
+								deleteMultiplayerSaveGames(); //Will only delete save games if was last player alive.
+							}
 						}
 
 						if ( players[PLAYER_NUM]->isLocalPlayer() || multiplayer == SERVER )

@@ -5449,6 +5449,7 @@ bool handleEvents(void)
 			// S.A.M: the multiplayer channels, on every machine, after the scripts have run:
 			// apply what arrived (in order), then send what this tick queued. No-op with no
 			// script loaded or outside multiplayer.
+			SAMParty::tick(); // S.A.M: a party that carried the run on and is gone, without a death to say so
 			SAMNet::tick();
 		}
 		else

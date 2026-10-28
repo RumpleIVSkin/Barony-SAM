@@ -12711,6 +12711,7 @@ bind_failed:
 			// Answer regardless of whether it matched: the host is asking "are you running
 			// S.A.M at all", and a mismatch still means yes.
 			SAMSync::acknowledgeFingerprint();
+			SAMLobby::hostShownSam(); // the host runs S.A.M: now the lobby hello may go
 			if ( !SAMSync::hasMismatch() )
 			{
 				return; // fingerprints match — logged, nothing to show
@@ -28818,6 +28819,7 @@ failed:
 		// S.A.M: the run is over and the score is settled. Fired before the window is built
 		// so a mod can record the outcome while the numbers are still in scope. Not
 		// cancellable: the run has already ended by the time anything reaches here.
+		if ( !SAMParty::partyCarriesOn() ) // the window that offers Dismiss while the party carries on is not the end: the final one fires it
 		{
 			SamEvent samOverEv("player.on_game_over");
 			samOverEv.i("player", (long long)player)
