@@ -4997,6 +4997,7 @@ void actMonster(Entity* my)
 
 	if ( my->getUID() % TICKS_PER_SECOND == ticks % TICKS_PER_SECOND )
 	{
+		SAMParty::think(my, myStats); // S.A.M: with every player down, party members make for the exit
 		if ( myStats && myStats->leader_uid != 0 )
 		{
 			Entity* leader = uidToEntity(myStats->leader_uid);

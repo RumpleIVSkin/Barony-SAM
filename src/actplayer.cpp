@@ -1604,6 +1604,10 @@ bool Player::Ghost_t::gamemodeAllowsGhosts()
 	{
 		return true;
 	}
+	if ( SAMParty::partyCarriesOn() )
+	{
+		return true; // S.A.M: solo with party members still standing: wait as a ghost, like co-op
+	}
 	return false;
 }
 
@@ -3346,7 +3350,8 @@ void actDeathCam(Entity* my)
 		}
 		else if ( !(players[DEATHCAM_PLAYERNUM]->ghost.isActive() 
 			|| (players[DEATHCAM_PLAYERNUM]->entity && players[DEATHCAM_PLAYERNUM]->entity->playerCreatedDeathCam == 0) )
-			&& DEATHCAM_DISABLE_GAMEOVER == 0 )
+			&& DEATHCAM_DISABLE_GAMEOVER == 0
+			&& !players[DEATHCAM_PLAYERNUM]->GUI.isGameoverActive() ) // S.A.M: the party code may have opened it already
 		{
 			MainMenu::openGameoverWindow(DEATHCAM_PLAYERNUM);
 		}
@@ -6209,6 +6214,58 @@ void playerDebugTests(Entity* my)
 		}
 	}
 #endif
+}
+
+// Every player is down and nothing carries the run on: the one-time "all dead" bookkeeping
+// (online scores here, and on each client by DEND). S.A.M: a function of its own so the
+// party code can run it when the last member standing falls after the players (sam_party.cpp).
+void samOnAllPlayersDead()
+{
+	if ( AchievementObserver::PlayerAchievements::allPlayersDeadEvent )
+	{
+		return;
+	}
+	AchievementObserver::PlayerAchievements::allPlayersDeadEvent = true;
+
+	// post online scores
+	if ( gameModeManager.allowsGlobalHiscores() )
+	{
+		if ( splitscreen )
+		{
+			for ( int c = 0; c < MAXPLAYERS; ++c ) {
+				if ( !client_disconnected[c] ) {
+#ifdef USE_PLAYFAB
+					if ( c == 0 )
+					{
+						playfabUser.postScore(c);
+					}
+#endif
+				}
+			}
+		}
+		else
+		{
+#ifdef USE_PLAYFAB
+			playfabUser.postScore(clientnum);
+#endif
+		}
+
+		if ( multiplayer == SERVER )
+		{
+			for ( int i = 1; i < MAXPLAYERS; ++i )
+			{
+				if ( client_disconnected[i] )
+				{
+					continue;
+				}
+				strcpy((char*)net_packet->data, "DEND"); //Post your hiscores here, we're all dead
+				net_packet->address.host = net_clients[i - 1].host;
+				net_packet->address.port = net_clients[i - 1].port;
+				net_packet->len = 4;
+				sendPacketSafe(net_sock, -1, net_packet, i - 1);
+			}
+		}
+	}
 }
 
 void actPlayer(Entity* my)
@@ -11719,49 +11776,13 @@ void actPlayer(Entity* my)
 								allDead = false;
 							}
 						}
-						if ( allDead && !AchievementObserver::PlayerAchievements::allPlayersDeadEvent )
+						if ( allDead && SAMParty::partyCarriesOn() )
 						{
-							AchievementObserver::PlayerAchievements::allPlayersDeadEvent = true;
-
-							// post online scores
-							if ( gameModeManager.allowsGlobalHiscores() )
-							{
-								if ( splitscreen )
-								{
-									for ( int c = 0; c < MAXPLAYERS; ++c ) {
-										if ( !client_disconnected[c] ) {
-#ifdef USE_PLAYFAB
-											if ( c == 0 )
-											{
-												playfabUser.postScore(c);
-											}
-#endif
-										}
-									}
-								}
-								else
-								{
-#ifdef USE_PLAYFAB
-									playfabUser.postScore(clientnum);
-#endif
-								}
-
-								if ( multiplayer == SERVER )
-								{
-									for ( int i = 1; i < MAXPLAYERS; ++i )
-									{
-										if ( client_disconnected[i] )
-										{
-											continue;
-										}
-										strcpy((char*)net_packet->data, "DEND"); //Post your hiscores here, we're all dead
-										net_packet->address.host = net_clients[i - 1].host;
-										net_packet->address.port = net_clients[i - 1].port;
-										net_packet->len = 4;
-										sendPacketSafe(net_sock, -1, net_packet, i - 1);
-									}
-								}
-							}
+							allDead = false; // S.A.M: party members still standing carry the run on
+						}
+						if ( allDead )
+						{
+							samOnAllPlayersDead();
 						}
 					}
 					my->removeLightField();

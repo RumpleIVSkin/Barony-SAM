@@ -28797,6 +28797,9 @@ failed:
 				break;
 			}
 		}
+		if ( SAMParty::partyCarriesOn() ) {
+			survivingPlayer = true; // S.A.M: a party member still standing can take the party to the exit
+		}
 
         // determine if we made highscore list
         int placement = 1;

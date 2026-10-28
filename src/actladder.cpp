@@ -84,11 +84,12 @@ void actLadder(Entity* my)
 	// use ladder (climb)
 	if (multiplayer != CLIENT)
 	{
+		const int samExit = SAMParty::exitUser(my); // S.A.M: every player is down and a party member reached this exit
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if ( selectedEntity[i] == my || client_selected[i] == my )
+			if ( selectedEntity[i] == my || client_selected[i] == my || i == samExit ) // S.A.M: or a party member carries the party on
 			{
-				if (inrange[i])
+				if (inrange[i] || i == samExit)
 				{
 					for (c = 0; c < MAXPLAYERS; c++)
 					{
@@ -359,11 +360,12 @@ void actPortal(Entity* my)
 	}
 
 	// step through portal
+	const int samExit = SAMParty::exitUser(my); // S.A.M: every player is down and a party member reached this exit
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if ( selectedEntity[i] == my || client_selected[i] == my )
+		if ( selectedEntity[i] == my || client_selected[i] == my || i == samExit ) // S.A.M: or a party member carries the party on
 		{
-			if (inrange[i])
+			if (inrange[i] || i == samExit)
 			{
 				for (c = 0; c < MAXPLAYERS; c++)
 				{
@@ -1103,11 +1105,12 @@ void Entity::actMidGamePortal()
 	}
 
 	// step through portal
+	const int samExit = SAMParty::exitUser(this); // S.A.M: every player is down and a party member reached this exit
 	for ( i = 0; i < MAXPLAYERS; i++ )
 	{
-		if ( selectedEntity[i] == this || client_selected[i] == this )
+		if ( selectedEntity[i] == this || client_selected[i] == this || i == samExit ) // S.A.M: or a party member carries the party on
 		{
-			if ( inrange[i] )
+			if ( inrange[i] || i == samExit )
 			{
 				for ( c = 0; c < MAXPLAYERS; c++ )
 				{
@@ -1554,11 +1557,12 @@ void actCustomPortal(Entity* my)
 	}
 
 	// step through portal
+	const int samExit = SAMParty::exitUser(my); // S.A.M: every player is down and a party member reached this exit
 	for ( i = 0; i < MAXPLAYERS; i++ )
 	{
-		if ( selectedEntity[i] == my || client_selected[i] == my )
+		if ( selectedEntity[i] == my || client_selected[i] == my || i == samExit ) // S.A.M: or a party member carries the party on
 		{
-			if ( inrange[i] )
+			if ( inrange[i] || i == samExit )
 			{
 				for ( c = 0; c < MAXPLAYERS; c++ )
 				{
