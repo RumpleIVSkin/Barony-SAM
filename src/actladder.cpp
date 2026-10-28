@@ -16,6 +16,7 @@
 #include "entity.hpp"
 #include "scores.hpp"
 #include "net.hpp"
+#include "sam_party.hpp"
 #include "collision.hpp"
 #include "player.hpp"
 #include "magic/magic.hpp"
@@ -116,6 +117,10 @@ void actLadder(Entity* my)
 							}
 							return;
 						}
+					}
+					if ( !SAMParty::exitsMayClose(my, i) )
+					{
+						return; // S.A.M: a party member the exit waits for is not here yet
 					}
 					if (playercount == 1)
 					{
@@ -388,6 +393,10 @@ void actPortal(Entity* my)
 						return;
 					}
 				}
+				if ( !SAMParty::exitsMayClose(my, i) )
+				{
+					return; // S.A.M: a party member the exit waits for is not here yet
+				}
 				if (playercount == 1)
 				{
 					messagePlayer(i, MESSAGE_INTERACTION, Language::get(510));
@@ -602,6 +611,10 @@ void actWinningPortal(Entity* my)
 						}
 						return;
 					}
+				}
+				if ( !SAMParty::exitsMayClose(my, i) )
+				{
+					return; // S.A.M: a party member the exit waits for is not here yet
 				}
 
 				victory = my->portalVictoryType;
@@ -874,6 +887,10 @@ void Entity::actExpansionEndGamePortal()
 						return;
 					}
 				}
+				if ( !SAMParty::exitsMayClose(this, i) )
+				{
+					return; // S.A.M: a party member the exit waits for is not here yet
+				}
 				victory = portalVictoryType;
 
 				if ( multiplayer != CLIENT )
@@ -1119,6 +1136,10 @@ void Entity::actMidGamePortal()
 						}
 						return;
 					}
+				}
+				if ( !SAMParty::exitsMayClose(this, i) )
+				{
+					return; // S.A.M: a party member the exit waits for is not here yet
 				}
 
 				Uint8 cutscene = 0;
@@ -1566,6 +1587,10 @@ void actCustomPortal(Entity* my)
 						}
 						return;
 					}
+				}
+				if ( !SAMParty::exitsMayClose(my, i) )
+				{
+					return; // S.A.M: a party member the exit waits for is not here yet
 				}
 				if ( playercount == 1 )
 				{

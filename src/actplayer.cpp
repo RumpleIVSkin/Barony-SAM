@@ -22,6 +22,7 @@
 #include "scores.hpp"
 #include "monster.hpp"
 #include "net.hpp"
+#include "sam_party.hpp"
 #include "collision.hpp"
 #include "player.hpp"
 #include "colors.hpp"
@@ -11332,6 +11333,10 @@ void actPlayer(Entity* my)
 							if ( c )
 							{
 								myFollower = uidToEntity(*c);
+							}
+							if ( myFollower && SAMParty::isMember(myFollower) )
+							{
+								continue; // S.A.M: a party member stays with the party when its leader falls
 							}
 							if ( myFollower )
 							{

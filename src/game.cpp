@@ -29,6 +29,7 @@
 #include "scores.hpp"
 #include "menu.hpp"
 #include "net.hpp"
+#include "sam_party.hpp"
 #ifdef STEAMWORKS
 #include <steam/steam_api.h>
 #include "steam.hpp"
@@ -2647,6 +2648,7 @@ void gameLogic(void)
 						}
 						list_FreeAll(&tempFollowers[c]);
 					}
+					SAMParty::respawnFallen(); // S.A.M: fallen party members rejoin beside their leaders
 
 					// Re-send the player totals and the XP curve: a client that joined mid-run has
 					// never seen them, and this runs on every floor entry, the first one included.
