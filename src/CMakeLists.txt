@@ -134,6 +134,7 @@ list(APPEND GAME_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_value.cpp" # a script table read once, in C++, for both runtimes
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_lobby.cpp" # mod slot actions and lobby cards -- game only (net code)
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_party.cpp" # party members -- game only (entity and monster code)
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_ally_items.cpp" # gear on allies -- game only (entity and monster code)
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_camera.cpp" # script camera control — game only (needs cameras[] and the renderer)
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_combat.cpp" # species damage resistance + on_damage_multiplier — game only (entity.cpp is not in EDITOR_SOURCES)
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../SAM-Framework/framework/sam_world_state.cpp" # per-character mod state inside the savegame
