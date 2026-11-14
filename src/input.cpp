@@ -9,6 +9,9 @@
 #endif
 #include "mod_tools.hpp"
 #include "ui/MainMenu.hpp"
+#ifndef EDITOR
+#include "sam_mp_input.hpp" // S.A.M: actions a script holds down (sam_hold_input)
+#endif
 
 #include <algorithm>
 
@@ -907,6 +910,20 @@ void Input::update() {
 		binding.analog = analogOf(binding);
 		const bool oldBinary = binding.binary;
 		binding.binary = binaryOf(binding);
+#ifndef EDITOR
+		// S.A.M: an action a script holds down (sam_hold_input / sam_press_input), on top of the real
+		// keys, so walking, turning and Use run through the game's own code. Nothing is held without a
+		// mod, so this is one false test per binding.
+		if ( SAMScriptInput::anyHeld() )
+		{
+			float samStrength = 0.f;
+			if ( SAMScriptInput::heldFor(player, pair.first.c_str(), &samStrength) )
+			{
+				binding.binary = true;
+				binding.analog = std::max(binding.analog, samStrength);
+			}
+		}
+#endif
 		if (oldBinary != binding.binary) {
 			if (binding.binary) {
 				if (binding.heldTicks == 0) {

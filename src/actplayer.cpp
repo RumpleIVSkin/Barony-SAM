@@ -15073,9 +15073,13 @@ void actPlayer(Entity* my)
 					entity->scalex = (real_t)lim.scale;
 					entity->scaley = (real_t)lim.scale;
 					entity->scalez = (real_t)lim.scale;
-					entity->focalx = lim.focalX;
-					entity->focaly = lim.focalY;
-					entity->focalz = lim.focalZ;
+					// Focal = the limb's "root" (from 3.10.0: that end of the model on the turning
+					// point) plus its own "focal".
+					double samFx = 0.0, samFy = 0.0, samFz = 0.0, samMx = 0.0, samMy = 0.0, samMz = 0.0;
+					SAMRaces::extraLimbFocal(lim, samFx, samFy, samFz, samMx, samMy, samMz);
+					entity->focalx = (real_t)samFx;
+					entity->focaly = (real_t)samFy;
+					entity->focalz = (real_t)samFz;
 					entity->yaw = my->yaw + (real_t)(lim.yawOffsetDeg * PI / 180.0);
 					entity->pitch = (real_t)lim.pitch;
 					entity->roll = (real_t)lim.roll;
@@ -15105,7 +15109,7 @@ void actPlayer(Entity* my)
 					}
 					entity->z += lim.offUp;
 
-					if ( lim.sway )
+					if ( lim.sway != SAMRaceDef::SAMExtraLimb::SwayNone )
 					{
 						// The tail's ping-pong, kept per-limb in its own fskill/skill so two
 						// swaying limbs do not share a phase.
@@ -15115,8 +15119,25 @@ void actPlayer(Entity* my)
 						else                          { entity->fskill[0] -= samRate; }
 						if ( entity->fskill[0] > PI / 3 )       { entity->skill[0] = 1; }
 						else if ( entity->fskill[0] < -PI / 3 ) { entity->skill[0] = 0; }
-						entity->pitch += 0.5 * sin(entity->fskill[0]);
-						entity->roll += -0.25 * sin(entity->fskill[0]);
+						if ( lim.sway == SAMRaceDef::SAMExtraLimb::SwaySide )
+						{
+							// "side": the far end swings to the player's left and right, about the
+							// turning point (the limb's "root" when it names one). Upright line for a
+							// limb that sticks out behind, front-to-back line for one that hangs or
+							// stands. The tilt below reads as a swish only on a model built like the
+							// salamander's tail; on any other it swings on the wrong plane.
+							double samYaw = entity->yaw, samPitch = entity->pitch, samRoll = entity->roll;
+							SAMRaces::swingSide(my->yaw, samMx, samMy, samMz, 0.5 * sin(entity->fskill[0]),
+								samYaw, samPitch, samRoll);
+							entity->yaw = (real_t)samYaw;
+							entity->pitch = (real_t)samPitch;
+							entity->roll = (real_t)samRoll;
+						}
+						else
+						{
+							entity->pitch += 0.5 * sin(entity->fskill[0]);
+							entity->roll += -0.25 * sin(entity->fskill[0]);
+						}
 					}
 					break;
 				}

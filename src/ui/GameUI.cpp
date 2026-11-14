@@ -4,6 +4,8 @@
 #include "sam_recipes.hpp" // S.A.M custom crafting kits
 #include "sam_rules.hpp"   // S.A.M XP curve: the XP bar's scale
 #include "sam_spells.hpp"  // S.A.M custom spell icon in the "new spell learned" popup
+#include "sam_races.hpp"   // S.A.M custom race: its own name on the character sheet
+#include "sam_logger.hpp"
 #include "MainMenu.hpp"
 #include "Frame.hpp"
 #include "Image.hpp"
@@ -2353,6 +2355,14 @@ void updateAllyBarFrame(const int player, Frame* baseFrame, int activeBars, int 
 		{
 			std::string followerName = "";
 			followerBar.customPortraitPath = "";
+			if ( bPlayerBars && followerStats->playerRace >= SAM_RACE_ID_BASE )
+			{
+				// S.A.M: a custom race may have its own small picture (the race's "icon"). The game's own
+				// table below is keyed by the host body's head sprite, so a race on the human body would
+				// show a human head.
+				const std::string samIcon = SAMRaces::iconPath(followerStats->playerRace);
+				if ( !samIcon.empty() ) { followerBar.customPortraitPath = "*" + samIcon; }
+			}
 			size_t maxNameLen = 0;
 			if ( bPlayerBars )
 			{
@@ -21662,7 +21672,25 @@ void Player::CharacterSheet_t::updateCharacterInfo()
 		}
 		std::string race = getMonsterLocalizedName(type).c_str();
 		capitalizeString(race);
-		if ( type == HUMAN )
+		// S.A.M: a custom race shows its OWN name on this line, not its body's species and, on a human
+		// body, a skin tone ("Human Landguard"). Only while the player is in the race's own body (a
+		// polymorph or a shapeshift changes stats->type, and then the vanilla name of what they are
+		// now is the right one) or in the aesthetic-only mode, where the line reads "Guised <name>".
+		// A vanilla race never takes this path.
+		bool samNamed = false;
+		{
+			const int samRace = stats[player.playernum]->playerRace;
+			if ( samRace >= SAM_RACE_ID_BASE )
+			{
+				const std::string samName = SAMRaces::displayName(samRace);
+				if ( !samName.empty() && (aestheticOnly || (int)type == SAMRaces::hostMonsterForRace(samRace)) )
+				{
+					race = samName;
+					samNamed = true;
+				}
+			}
+		}
+		if ( type == HUMAN && !samNamed )
 		{
 			appearance = Language::get(20 + stats[player.playernum]->stat_appearance % NUMAPPEARANCES);
 			capitalizeString(appearance);
@@ -21688,6 +21716,11 @@ void Player::CharacterSheet_t::updateCharacterInfo()
 		if ( strcmp(buf, raceText->getText()) )
 		{
 			raceText->setText(buf);
+			if ( samNamed )
+			{
+				// Once per change, not per frame: this branch only runs when the text differs.
+				SAM_INFO("RACE", std::string("character sheet race line: \"") + buf + "\"");
+			}
 		}
 		int width = 0;
 		if ( auto textGet = Text::get(raceText->getText(), raceText->getFont(),

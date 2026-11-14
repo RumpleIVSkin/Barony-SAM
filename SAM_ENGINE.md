@@ -9,7 +9,8 @@ makes to the engine, on top of the original Barony git history.
 |---|---|
 | `upstream-base` | upstream Barony commit `962a5ce3`, the point S.A.M forked from (4 commits after `v5.0.2`) |
 | `sam-framework` | `upstream-base` plus every S.A.M engine change |
-| `sam-v3.7.0` | the tip of `sam-framework`, matching S.A.M Framework v3.7.0 (commit `ed748a7`) |
+| `sam-v3.12.1` | the tip of `sam-framework`, matching S.A.M Framework v3.12.1 (commit `4b93e60`) |
+| `sam-v3.7.0` | the engine as of S.A.M Framework v3.7.0 (commit `ed748a7`) |
 | `sam-v3.4.0` | the engine as of S.A.M Framework v3.4.0 (commit `9c192af`) |
 
 To see exactly what S.A.M changed in the engine:
@@ -19,8 +20,9 @@ git diff upstream-base sam-framework
 ```
 
 The first five S.A.M commits (framework v1.2.x) are separate; the rest of the engine work up to
-v3.4.0 is one commit, `S.A.M Framework v3.4.0: engine integration`, and v3.5.0 to v3.7.0 is one more,
-`S.A.M Framework v3.7.0: engine changes from v3.5.0 to v3.7.0`. Build a `sam-vX.Y.Z` tag against the
+v3.4.0 is one commit, `S.A.M Framework v3.4.0: engine integration`, v3.5.0 to v3.7.0 is one more,
+`S.A.M Framework v3.7.0: engine changes from v3.5.0 to v3.7.0`, and v3.8.0 to v3.12.1 is one more,
+`S.A.M Framework v3.12.1: engine changes from v3.8.0 to v3.12.1`. Build a `sam-vX.Y.Z` tag against the
 SAM-Framework tag `vX.Y.Z` with the same number.
 
 ## Finding the hooks
@@ -36,7 +38,7 @@ The build expects the framework as a sibling folder named `SAM-Framework`:
 ```
 workspace/
   Barony/          this repo
-  SAM-Framework/   https://github.com/spider12223/SAM-Framework  (tag v3.7.0)
+  SAM-Framework/   https://github.com/spider12223/SAM-Framework  (tag v3.12.1)
 ```
 
 `CMakeLists.txt` and `src/CMakeLists.txt` add `../SAM-Framework/framework` to the include path and

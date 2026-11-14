@@ -14030,6 +14030,35 @@ failed:
 		return result;
 	}
 
+	// S.A.M custom races (ids >= SAM_RACE_ID_BASE): fill a race card from the registered def.
+	// getRaceKey()'s switch returns "" for a modded id, i.e. a blank card, so a custom race never goes
+	// through the vanilla text. Use setColor (reflow-safe), NEVER addColorToLine: a free-form description
+	// reflows to fit and the vanilla per-line color map (keyed to pre-reflow structure) then desyncs
+	// and Text::render() indexes a null color array -> crash. Same lesson as the class arm.
+	// Shared by the character-select card and the character sheet's race tooltip.
+	static void samFillRaceCard(Frame& card, int race)
+	{
+		const SAMRaceDef* d = SAMRaces::get(race);
+		if ( auto details_title = card.findField("details_title") ) {
+			details_title->clearLinesToColor();
+			details_title->clearIndividualLinePadding();
+			details_title->setText(d ? d->name.c_str() : "");
+			details_title->setColor(hudColors.characterDLC3ClassText);
+		}
+		if ( auto details_text = card.findField("details") ) {
+			details_text->clearLinesToColor();
+			details_text->clearIndividualLinePadding();
+			details_text->setText(d ? d->description.c_str() : "");
+			details_text->setColor(color_dlc0);
+		}
+		if ( auto details_text_right = card.findField("details_right") ) {
+			details_text_right->clearLinesToColor();
+			details_text_right->clearIndividualLinePadding();
+			details_text_right->setText("");
+			details_text_right->setColor(color_dlc0);
+		}
+	}
+
 	void RaceDescriptions::update_details_text(Frame& card, int race, int modified_race)
 	{
 		auto& raceDescriptionData = RaceDescriptions::getMonsterDescriptionData(modified_race);
@@ -14165,8 +14194,20 @@ failed:
 		}
 	}
 
-	void RaceDescriptions::update_details_text(Frame& card, void* stats) 
+	void RaceDescriptions::update_details_text(Frame& card, void* stats)
 	{
+		// S.A.M: a custom race in its own body gets its own name and description here, where the
+		// vanilla lookup below would show the text of the body's species and list its innate abilities.
+		{
+			const Stat* samStats = static_cast<Stat*>(stats);
+			if ( samStats->playerRace >= SAM_RACE_ID_BASE && samStats->stat_appearance == 0
+				&& SAMRaces::get(samStats->playerRace) /* hostMonsterForRace() says HUMAN for an id no loaded mod registered */
+				&& (int)samStats->type == SAMRaces::hostMonsterForRace(samStats->playerRace) )
+			{
+				samFillRaceCard(card, samStats->playerRace);
+				return;
+			}
+		}
 		Monster race = HUMAN;
 		if ( static_cast<Stat*>(stats)->stat_appearance == 0 && static_cast<Stat*>(stats)->playerRace != RACE_HUMAN )
 		{
@@ -14347,31 +14388,9 @@ failed:
 		const int race = stats[index]->playerRace;
 
 		// S.A.M custom races (ids >= SAM_RACE_ID_BASE): fill the card from the registered def.
-		// getRaceKey()'s switch returns "" for a modded id, i.e. a blank card, so short-circuit
-		// here. Use setColor (reflow-safe), NEVER addColorToLine: a free-form description reflows
-		// to fit and the vanilla per-line color map (keyed to pre-reflow structure) then desyncs
-		// and Text::render() indexes a null color array -> crash. Same lesson as the class arm.
 		if ( race >= SAM_RACE_ID_BASE )
 		{
-			const SAMRaceDef* d = SAMRaces::get(race);
-			if ( auto details_title = card.findField("details_title") ) {
-				details_title->clearLinesToColor();
-				details_title->clearIndividualLinePadding();
-				details_title->setText(d ? d->name.c_str() : "");
-				details_title->setColor(hudColors.characterDLC3ClassText);
-			}
-			if ( auto details_text = card.findField("details") ) {
-				details_text->clearLinesToColor();
-				details_text->clearIndividualLinePadding();
-				details_text->setText(d ? d->description.c_str() : "");
-				details_text->setColor(color_dlc0);
-			}
-			if ( auto details_text_right = card.findField("details_right") ) {
-				details_text_right->clearLinesToColor();
-				details_text_right->clearIndividualLinePadding();
-				details_text_right->setText("");
-				details_text_right->setColor(color_dlc0);
-			}
+			samFillRaceCard(card, race);
 			return;
 		}
 
@@ -24983,11 +25002,18 @@ failed:
         }
         
         // portrait
-        const std::string portrait_path =
+        std::string portrait_path =
             monsterData.getAllyIconFromSprite(playerHeadSprite(
                 (Monster)getMonsterFromPlayerRace(info.players[player].race),
                 (sex_t)info.players[player].stats.sex,
                 (int)info.players[player].stats.statscore_appearance));
+        // S.A.M: the game's table is keyed by the host body's head, so a custom race would show its
+        // body's head. A race that declares an "icon" shows that picture instead.
+        if ( info.players[player].race >= SAM_RACE_ID_BASE )
+        {
+            const std::string samIcon = SAMRaces::iconPath(info.players[player].race);
+            if ( !samIcon.empty() ) { portrait_path = "*" + samIcon; }
+        }
         auto portrait = subframe->addImage(
             SDL_Rect{32, 24, 32, 32},
             0xffffffff,
@@ -38340,6 +38366,9 @@ failed:
 							txt += str;
 						}
 						blurb->setText(txt.c_str());
+						// S.A.M: a race's description is written by its modder, not wrapped by hand to
+						// this box as the game's own blurbs are.
+						if ( SAMRaces::isCompendiumPage(name) ) { blurb->reflowTextToFit(0); }
 					}
 				}
 
@@ -38381,7 +38410,16 @@ failed:
 					}
 
 					// find records for this item
-					if ( Compendium_t::Events_t::monsterUniqueIDLookup.find(entry.unique_npc)
+					if ( SAMRaces::isCompendiumPage(name) )
+					{
+						// S.A.M: a custom race is played, not fought. The records are kept per monster
+						// type, so they would be its host body's: leave the box hidden.
+						if ( auto page_right_overlay = page_right->findFrame("page_right_overlay") )
+						{
+							page_right_overlay->setDisabled(true);
+						}
+					}
+					else if ( Compendium_t::Events_t::monsterUniqueIDLookup.find(entry.unique_npc)
 						!= Compendium_t::Events_t::monsterUniqueIDLookup.end() )
 					{
 						populateRecordsSectionItems(page_right, 
@@ -38410,7 +38448,11 @@ failed:
 						if ( auto txt = page_right->findField("level type") )
 						{
 							std::string str = Language::get(6190);
-							if ( entry.lvl.size() > 0 )
+							if ( SAMRaces::isCompendiumPage(name) )
+							{
+								str = "PLAYABLE"; // S.A.M: a race has no level of its own; the body's kind follows
+							}
+							else if ( entry.lvl.size() > 0 )
 							{
 								char buf[32] = "-";
 								auto stat = entry.getDisplayStat("lvl");
@@ -38692,6 +38734,8 @@ failed:
 								}
 							}
 							abilities->setText(txt.c_str());
+							// S.A.M: a race's lines name monsters and spells, so some run past the page.
+							if ( SAMRaces::isCompendiumPage(name) ) { abilities->reflowTextToFit(0); }
 							const int numAbilitiesLines = abilities->getNumTextLines();
 							SDL_Rect abilityPos = abilities->getSize();
 
@@ -41611,6 +41655,11 @@ failed:
 		contents_activate_from_tab = true;
 		players[getMenuOwner()]->inventoryUI.compendiumItemTooltipDisplay.type = NUMITEMS;
 		compendiumItemTooltip.clear();
+
+		// S.A.M: a page for each custom race loaded now. Every time it opens, because mods can change
+		// between opens and the game's own reloads drop the pages. The completion count below skips
+		// them (updateLorePointCounts, mod_tools.cpp). The filter test is the one the spider page uses.
+		SAMRaces::addCompendiumPages((!intro && ::arachnophobia_filter) || (intro && MainMenu::arachnophobia_filter));
 
 		if ( !Compendium_t::PointsAnim_t::firstLoad )
 		{

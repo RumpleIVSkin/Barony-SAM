@@ -17019,6 +17019,9 @@ void Compendium_t::writeUnlocksSaveData()
 	obj.RemoveAllMembers();
 	for ( auto& pair : CompendiumMonsters_t::unlocks )
 	{
+		// S.A.M: a custom race's page is rebuilt each time the compendium opens; it is no progress
+		// of the player's, and the file must not carry it to a game without the mod.
+		if ( SAMRaces::isCompendiumPage(pair.first) ) { continue; }
 		obj.AddMember(rapidjson::Value(pair.first.c_str(), exportDocument.GetAllocator()),
 			rapidjson::Value((int)pair.second), exportDocument.GetAllocator());
 	}
@@ -19359,7 +19362,8 @@ void Compendium_t::updateLorePointCounts()
 	total = 0;
 	for ( auto& pair : CompendiumMonsters_t::contents_unfiltered["default"] )
 	{
-		if ( pair.first == "crab" || pair.first == "bubbles" )
+		// S.A.M: a custom race's page is not something to find, so it counts for nothing either way.
+		if ( pair.first == "crab" || pair.first == "bubbles" || SAMRaces::isCompendiumPage(pair.first) )
 		{
 			continue;
 		}

@@ -18106,6 +18106,14 @@ void GenericGUIMenu::AlchemyGUI_t::updateAlchemyMenu()
 			break;
 		}
 	}
+	// S.A.M (3.12.1): a custom race with "can_open_tins" opens a tin here too, at the cauldron and the
+	// frying pan, not only when eating one (items.cpp). Off when the player turned race abilities off. The
+	// game's own Goatman and Automaton keep the game's rule here: they still need an opener to cook a tin.
+	if ( !hasTinOpener && stats[playernum]
+		&& SAMRaces::canOpenTins(stats[playernum]->playerRace, stats[playernum]->stat_appearance) )
+	{
+		hasTinOpener = true;
+	}
 
 	if ( !parentGUI.isGUIOpen()
 		|| parentGUI.guiType != GUICurrentType::GUI_TYPE_ALCHEMY

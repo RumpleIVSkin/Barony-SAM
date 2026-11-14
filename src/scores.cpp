@@ -24,6 +24,7 @@
 #include "sam_classes.hpp"   // SAM_CLASS_ID_BASE — custom class ids in save DLC validation
 #include "sam_world_state.hpp" // S.A.M: per-character mod state riding in additional_data
 #include "sam_items.hpp"       // S.A.M: custom items re-matched by name when a save is read
+#include "sam_races.hpp"       // S.A.M: a custom race re-matched by its id string when a save is read
 #include "sam_logger.hpp"
 #include "sys/stat.h"
 #include "paths.hpp"
@@ -2730,6 +2731,73 @@ namespace
 	}
 }
 
+// S.A.M: a custom race is saved as its runtime NUMBER, and numbers are handed out per mod SET (sorted by
+// namespace), so adding a race mod that sorts earlier moved every later race and an old save came back as a
+// DIFFERENT race: its body, vision, allegiances and, on the Continue screen, its picture. Every save now
+// records what each race number meant ("sam_raceids" in additional_data, written by SAMWorldState::collect).
+// Here, right after the hash check like the items above, each player's race is re-pointed at the number its
+// ID has now. A race whose mod is not loaded becomes a human in the in-memory save (with a log line) rather
+// than silently becoming whatever race now holds that number; it is only gone for good if the player saves
+// again without the mod. A save without the table, a vanilla race (< SAM_RACE_ID_BASE) and a number that is
+// not in the table are left exactly as they were, so this is a no-op for a vanilla or an old save.
+namespace
+{
+	void samRemapSavedRaces(SaveGameInfo& info)
+	{
+		std::string table;
+		for ( const auto& kv : info.additional_data )
+		{
+			if ( kv.first == "sam_raceids" ) { table = kv.second; break; }
+		}
+		std::map<int, int> oldToNew;
+		std::map<int, std::string> unresolved;
+		if ( !SAMRaces::remapSavedRaceIds(table, oldToNew, unresolved) ) { return; }
+
+		int remapped = 0;
+		std::map<std::string, int> dropped; // race id -> players
+		for ( auto& p : info.players )
+		{
+			if ( p.race < static_cast<Uint32>(SAM_RACE_ID_BASE) ) { continue; }
+			const int saved = static_cast<int>(p.race);
+			const auto m = oldToNew.find(saved);
+			if ( m != oldToNew.end() )
+			{
+				if ( static_cast<Uint32>(m->second) != p.race )
+				{
+					p.race = static_cast<Uint32>(m->second);
+					++remapped;
+				}
+				continue;
+			}
+			const auto u = unresolved.find(saved);
+			if ( u != unresolved.end() )
+			{
+				dropped[u->second] += 1;
+				p.race = static_cast<Uint32>(RACE_HUMAN);
+			}
+			// Not in the table at all: unknown provenance. Leave it as it was.
+		}
+
+		// getSaveGameInfo also feeds the save-slot list, so the same file is read many times per
+		// menu visit; say each thing once per (file, table).
+		static std::string lastLogged;
+		const std::string logKey = table + "|" + info.gamename + "|" + std::to_string(info.dungeon_lvl);
+		if ( remapped == 0 && dropped.empty() ) { return; }
+		if ( logKey == lastLogged ) { return; }
+		lastLogged = logKey;
+		if ( remapped > 0 )
+		{
+			SAM_INFO("WORLD", std::to_string(remapped) + " custom race(s) in '" + info.gamename
+				+ "' re-pointed to their current numbers (the mod set changed since it was saved).");
+		}
+		for ( const auto& kv : dropped )
+		{
+			SAM_WARN("WORLD", "'" + info.gamename + "' was saved as [" + kv.first + "], whose mod is not loaded;"
+				" it plays as a human this time. Re-enable that mod BEFORE saving again to keep the race.");
+		}
+	}
+}
+
 /*-------------------------------------------------------------------------------
 
 	getSaveGameInfo
@@ -2789,6 +2857,7 @@ SaveGameInfo getSaveGameInfo(bool singleplayer, int saveIndex)
 	// S.A.M: AFTER the hash check (the hash covers item types as written), re-point every
 	// custom item at the id its name has now. No-op for vanilla saves and old saves.
 	samRemapSavedItems(info);
+	samRemapSavedRaces(info);
 
 	return info;
 }
